@@ -14,7 +14,7 @@ use objc::{
 use skia_safe::gpu::mtl;
 
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[link(name = "QuartzCore", kind = "framework")]
 extern "C" {
@@ -34,8 +34,8 @@ pub struct MetalSurface {
 
 impl super::Surface for MetalSurface {
     fn new(
-        window_handle: Rc<dyn raw_window_handle::HasWindowHandle>,
-        _display_handle: Rc<dyn raw_window_handle::HasDisplayHandle>,
+        window_handle: Arc<dyn raw_window_handle::HasWindowHandle>,
+        _display_handle: Arc<dyn raw_window_handle::HasDisplayHandle>,
         size: PhysicalWindowSize,
         _opengl_api: Option<OpenGLAPI>,
     ) -> Result<Self, i_slint_core::platform::PlatformError> {

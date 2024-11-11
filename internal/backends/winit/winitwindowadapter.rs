@@ -9,6 +9,7 @@ use core::cell::{Cell, RefCell};
 use core::pin::Pin;
 use std::rc::Rc;
 use std::rc::Weak;
+use std::sync::Arc;
 
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowExtWebSys;
@@ -123,12 +124,12 @@ fn window_is_resizable(
 }
 
 enum WinitWindowOrNone {
-    HasWindow(Rc<winit::window::Window>),
+    HasWindow(Arc<winit::window::Window>),
     None(RefCell<WindowAttributes>),
 }
 
 impl WinitWindowOrNone {
-    fn as_window(&self) -> Option<Rc<winit::window::Window>> {
+    fn as_window(&self) -> Option<Arc<winit::window::Window>> {
         match self {
             Self::HasWindow(window) => Some(window.clone()),
             Self::None { .. } => None,
@@ -336,7 +337,7 @@ impl WinitWindowAdapter {
         self.renderer.as_ref()
     }
 
-    pub fn ensure_window(&self) -> Result<Rc<winit::window::Window>, PlatformError> {
+    pub fn ensure_window(&self) -> Result<Arc<winit::window::Window>, PlatformError> {
         let window_attributes = match &*self.winit_window_or_none.borrow() {
             WinitWindowOrNone::HasWindow(window_rc) => return Ok(window_rc.clone()),
             WinitWindowOrNone::None(attributes) => attributes.borrow().clone(),
@@ -372,7 +373,7 @@ impl WinitWindowAdapter {
                 attributes.position = last_window_rc.outer_position().ok().map(|pos| pos.into());
                 *winit_window_or_none = WinitWindowOrNone::None(attributes.into());
 
-                if let Some(last_instance) = Rc::into_inner(last_window_rc) {
+                if let Some(last_instance) = Arc::into_inner(last_window_rc) {
                     crate::event_loop::unregister_window(last_instance.id());
                     drop(last_instance);
                 } else {
@@ -453,7 +454,7 @@ impl WinitWindowAdapter {
         Ok(())
     }
 
-    pub fn winit_window(&self) -> Option<Rc<winit::window::Window>> {
+    pub fn winit_window(&self) -> Option<Arc<winit::window::Window>> {
         self.winit_window_or_none.borrow().as_window()
     }
 

@@ -43,7 +43,7 @@ pub enum WinitWindowEventResult {
 }
 
 mod renderer {
-    use std::rc::Rc;
+    use std::sync::Arc;
 
     use i_slint_core::{platform::PlatformError, OpenGLAPI};
 
@@ -61,7 +61,7 @@ mod renderer {
             &self,
             window_attributes: winit::window::WindowAttributes,
             opengl_api: Option<OpenGLAPI>,
-        ) -> Result<Rc<winit::window::Window>, PlatformError>;
+        ) -> Result<Arc<winit::window::Window>, PlatformError>;
 
         fn is_suspended(&self) -> bool;
     }

@@ -4,7 +4,7 @@
 use i_slint_core::api::{OpenGLAPI, PhysicalSize as PhysicalWindowSize};
 use i_slint_core::platform::PlatformError;
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 use windows::core::Interface;
 use windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL_11_0;
 use windows::Win32::Graphics::Dxgi::Common::DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN;
@@ -252,8 +252,8 @@ pub struct D3DSurface {
 
 impl super::Surface for D3DSurface {
     fn new(
-        window_handle: Rc<dyn raw_window_handle::HasWindowHandle>,
-        _display_handle: Rc<dyn raw_window_handle::HasDisplayHandle>,
+        window_handle: Arc<dyn raw_window_handle::HasWindowHandle>,
+        _display_handle: Arc<dyn raw_window_handle::HasDisplayHandle>,
         size: PhysicalWindowSize,
         _opengl_api: Option<OpenGLAPI>,
     ) -> Result<Self, i_slint_core::platform::PlatformError> {
