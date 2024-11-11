@@ -6,10 +6,14 @@ use std::sync::Arc;
 
 use i_slint_core::renderer::Renderer;
 use i_slint_core::{platform::PlatformError, OpenGLAPI};
-use i_slint_renderer_femtovg::{FemtoVGRenderer, FemtoVGRendererExt};
+use i_slint_renderer_femtovg::{
+    FemtoVGOpenGLRenderer, FemtoVGOpenGLRendererExt, FemtoVGRenderer, FemtoVGRendererExt,
+};
 
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowExtWebSys;
+
+use crate::physical_size_to_slint;
 
 use super::WinitCompatibleRenderer;
 
@@ -17,14 +21,14 @@ use super::WinitCompatibleRenderer;
 mod glcontext;
 
 pub struct GlutinFemtoVGRenderer {
-    renderer: FemtoVGRenderer,
+    renderer: FemtoVGOpenGLRenderer,
     suspended: Cell<bool>,
 }
 
 impl GlutinFemtoVGRenderer {
     pub fn new_suspended() -> Box<dyn WinitCompatibleRenderer> {
         Box::new(Self {
-            renderer: FemtoVGRenderer::new_without_context(),
+            renderer: FemtoVGOpenGLRenderer::new_without_context(),
             suspended: Cell::new(true),
         })
     }
@@ -79,7 +83,65 @@ impl super::WinitCompatibleRenderer for GlutinFemtoVGRenderer {
     }
 
     fn suspend(&self) -> Result<(), PlatformError> {
-        self.renderer.clear_opengl_context()
+        self.renderer.clear_graphics_context()
+    }
+
+    fn is_suspended(&self) -> bool {
+        self.suspended.get()
+    }
+}
+
+pub struct WGPUFemtoVGRenderer {
+    renderer: FemtoVGRenderer<i_slint_renderer_femtovg::WGPUBackend>,
+    suspended: Cell<bool>,
+}
+
+impl WGPUFemtoVGRenderer {
+    pub fn new_suspended() -> Box<dyn WinitCompatibleRenderer> {
+        Box::new(Self {
+            renderer: FemtoVGRenderer::<i_slint_renderer_femtovg::WGPUBackend>::new_without_context(
+            ),
+            suspended: Cell::new(true),
+        })
+    }
+}
+
+impl WinitCompatibleRenderer for WGPUFemtoVGRenderer {
+    fn render(&self, _window: &i_slint_core::api::Window) -> Result<(), PlatformError> {
+        self.renderer.render()
+    }
+
+    fn as_core_renderer(&self) -> &dyn i_slint_core::renderer::Renderer {
+        &self.renderer
+    }
+
+    fn suspend(&self) -> Result<(), PlatformError> {
+        self.renderer.clear_graphics_context()
+    }
+
+    fn resume(
+        &self,
+        window_attributes: winit::window::WindowAttributes,
+        _opengl_api: Option<OpenGLAPI>,
+    ) -> Result<Arc<winit::window::Window>, PlatformError> {
+        let winit_window = Arc::new(crate::event_loop::with_window_target(|event_loop| {
+            event_loop.create_window(window_attributes).map_err(|winit_os_error| {
+                format!("Error creating native window for Skia rendering: {}", winit_os_error)
+                    .into()
+            })
+        })?);
+
+        let size = winit_window.inner_size();
+
+        self.renderer.backend().set_window_handle(
+            &self.renderer,
+            Box::new(winit_window.clone()),
+            physical_size_to_slint(&size),
+        )?;
+
+        self.suspended.set(false);
+
+        Ok(winit_window)
     }
 
     fn is_suspended(&self) -> bool {
