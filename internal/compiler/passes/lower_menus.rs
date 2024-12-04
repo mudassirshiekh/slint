@@ -7,7 +7,7 @@
 //! be further inlined as it may expends to native widget that needs inlining
 
 use crate::diagnostics::BuildDiagnostics;
-use crate::expression_tree::NamedReference;
+use crate::expression_tree::{Expression, NamedReference};
 use crate::langtype::ElementType;
 use crate::object_tree::*;
 use smol_str::{format_smolstr, SmolStr};
@@ -128,6 +128,25 @@ fn process_window(
             &*menu_bar.borrow(),
         );
     }
+    menu_bar.borrow_mut().repeated = Some(crate::object_tree::RepeatedElementInfo {
+        model: Expression::UnaryOp {
+            op: '!',
+            sub: Expression::FunctionCall {
+                function: Expression::BuiltinFunctionReference(
+                    crate::expression_tree::BuiltinFunction::SupportsNativeMenuBar,
+                    None,
+                )
+                .into(),
+                arguments: vec![],
+                source_location: None,
+            }
+            .into(),
+        },
+        model_data_id: SmolStr::default(),
+        index_id: SmolStr::default(),
+        is_conditional_element: true,
+        is_listview: None,
+    });
 
     // Create a child that contains all the child but the menubar
     let child = Element {
