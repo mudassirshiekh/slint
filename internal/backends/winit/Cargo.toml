@@ -57,6 +57,9 @@ imgref = { version = "1.6.1", optional = true }
 rgb = { version = "0.8.27", optional = true }
 bytemuck = { workspace = true, optional = true, features = ["derive"] }
 
+[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
+muda = { version = "0.15.3", optional = true}
+vtable = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-sys = { workspace = true, features=["HtmlInputElement", "HtmlCanvasElement", "Window", "Document", "Event", "KeyboardEvent", "InputEvent", "CompositionEvent", "DomStringMap", "ClipboardEvent", "DataTransfer"] }

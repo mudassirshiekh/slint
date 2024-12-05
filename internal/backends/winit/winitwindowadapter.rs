@@ -1047,6 +1047,76 @@ impl WindowAdapterInternal for WinitWindowAdapter {
             .get()
     }
 
+    #[cfg(all(feature = "muda", any(target_os = "macos", target_os = "windows")))]
+    fn supports_native_menu_bar(&self) -> bool {
+        true
+    }
+
+    #[cfg(all(feature = "muda" , any(target_os = "macos", target_os = "windows")))]
+    fn setup_menubar(&self, menubar: vtable::VBox<i_slint_core::window::MenuVTable>) {
+        type MenuRef<'a> = vtable::VRef<'a, i_slint_core::window::MenuVTable>;
+        type EntryMap = std::collections::HashMap<muda::MenuId, i_slint_core::items::MenuEntry>;
+        fn generate_menu_entry(
+            menu: MenuRef,
+            entry: &i_slint_core::items::MenuEntry,
+            depth: usize,
+            map: &mut EntryMap,
+            window_id: &str,
+        ) -> Box<dyn muda::IsMenuItem> {
+            let id = muda::MenuId(format!("{window_id}|{}", entry.id));
+            map.insert(id.clone(), entry.clone());
+            if !entry.has_sub_menu {
+                Box::new(muda::MenuItem::with_id(
+                    id.clone(),
+                    &entry.title,
+                    true, /*entry.enabled*/
+                    None,
+                ))
+            } else {
+                let mut sub_menu =
+                    muda::Submenu::with_id(id.clone(), entry.title, true /*entry.enabled*/);
+                if depth < 15 {
+                    let sub_entries = menu.sub_menu(Some(entry));
+                    for e in sub_entries {
+                        sub_menu.append(&*generate_menu_entry(menu, &e, depth + 1, map, window_id));
+                    }
+                } else {
+                    // infinite menu depth is possible, but we want to limit the amount of item passed to muda
+                    sub_menu.append(&muda::MenuItem::new(
+                        "<Error: Menu Depth limit reached>",
+                        false,
+                        None,
+                    ));
+                }
+                Box::new(sub_menu)
+            }
+        }
+
+        let menu = muda::Menu::new();
+        let mut map = EntryMap::new();
+        let menu_entries = menubar.sub_menu(None);
+        let window_id = u64::from(self.winit_window().unwrap().id()).to_string();
+        for e in menu_entries {
+            menu.append(&*generate_menu_entry(menubar.borrow(), &e, 0, &mut map, &window_id));
+        }
+
+        muda::MenuEvent::set_event_handler(Some(|_| todo!()));
+
+        #[cfg(target_os = "windows")]
+        {
+            use winit::raw_window_handle::*;
+            if let RawWindowHandle::Win32(handle) =
+                self.winit_window().unwrap().window_handle().unwrap().as_raw()
+            {
+                unsafe { menu.init_for_hwnd(handle.hwnd.get()) };
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            menu.init_for_nsapp();
+        }
+    }
+
     #[cfg(enable_accesskit)]
     fn handle_focus_change(&self, _old: Option<ItemRc>, _new: Option<ItemRc>) {
         let Some(accesskit_adapter_cell) = self.accesskit_adapter() else { return };
