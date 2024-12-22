@@ -51,7 +51,7 @@ follows:
   - iOS: *Todo*. Support for iOS will commence after the initial support for Android is completed.
 
 ### Accessibility
-
+## By Mudassir Alam
 Slint supports keyboard based navigation of many widgets, and user interfaces
 are scalable. The basic infrastructure for assistive technology like screen
 readers is in place. We're aware that more work is needed to get best-of-class
